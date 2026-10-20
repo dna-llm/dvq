@@ -7,6 +7,7 @@
 
 import numpy as np
 from typing import Literal
+from tqdm import tqdm
 
 # Nucleotide channels for binary indicator encoding.
 # Each channel produces a binary signal that is 1 where the nucleotide
@@ -21,7 +22,7 @@ DEFAULT_SPECTRUM_BINS = 512
 
 def _binary_indicator_encoding(seq: str) -> np.ndarray:
     """
-    Encode a DNA sequence as a (4 x L) binary indicator matrix, where L is
+    Encode a DNA sequence as a (4xL) binary indicator matrix, where L is
     the sequence length and each row corresponds to one nucleotide channel
     (A, C, G, T). Entry [i, j] is 1 if position j is nucleotide i, else 0.
 
@@ -29,12 +30,11 @@ def _binary_indicator_encoding(seq: str) -> np.ndarray:
     Unknown characters (N, gaps) are silently assigned zero across all channels.
 
     Parameters:
-    seq (str): The input DNA sequence.
+    seq (str): the input DNA sequence.
 
     Returns:
-    np.ndarray: A (4 x L) binary matrix of dtype float.
+    np.ndarray: a (4xL) binary matrix of dtype float.
     """
-    # Encode sequence as ASCII integer array for vectorised comparison
     arr = np.frombuffer(seq.upper().encode('ascii'), dtype=np.uint8)
     matrix = np.zeros((4, len(arr)), dtype=float)
     for i, char_code in enumerate(NUCLEOTIDE_CHARS):
@@ -44,19 +44,18 @@ def _binary_indicator_encoding(seq: str) -> np.ndarray:
 
 def _normalise_spectrum(spectrum: np.ndarray) -> np.ndarray:
     """
-    Apply z-score normalisation to a power spectrum (subtract mean, divide by
-    standard deviation). This removes differences in overall signal amplitude
+    Apply z-score normalisation to a power spectrum. This removes differences in overall signal amplitude
     caused by sequence length or nucleotide composition, retaining only the
     periodic structure (shape) of the spectrum.
 
     If the standard deviation is zero (flat spectrum, e.g. a single-nucleotide
-    sequence), the spectrum is returned as all zeros rather than raising.
+    sequence), the spectrum is returned as all zeros.
 
     Parameters:
-    spectrum (np.ndarray): The raw power spectrum.
+    spectrum (np.ndarray): the raw power spectrum.
 
     Returns:
-    np.ndarray: The z-score normalised power spectrum.
+    np.ndarray: the z-score normalised power spectrum.
     """
     mean = np.mean(spectrum)
     std = np.std(spectrum)
@@ -72,20 +71,16 @@ def _interpolate_spectrum(spectrum: np.ndarray, n_bins: int) -> np.ndarray:
     This rescales the frequency axis so that bin k represents the same
     physical frequency (k / n_bins) regardless of the original sequence
     length. This is essential for comparing spectra from sequences of
-    different lengths — without it, the same bin index corresponds to
+    different lengths, without it, the same bin index corresponds to
     different physical frequencies across sequences, making bin-by-bin
     comparison meaningless.
 
-    For example, the periodicity-3 peak in coding sequences always sits at
-    frequency 1/3, but at different bin indices depending on sequence length.
-    Interpolating to a fixed axis aligns these peaks correctly.
-
     Parameters:
-    spectrum (np.ndarray): The raw power spectrum to interpolate.
-    n_bins (int): The target number of frequency bins.
+    spectrum (np.ndarray): the raw power spectrum to interpolate.
+    n_bins (int): the target number of frequency bins.
 
     Returns:
-    np.ndarray: The interpolated spectrum of length n_bins.
+    np.ndarray: the interpolated spectrum of length n_bins.
     """
     original_bins = np.linspace(0, 1, len(spectrum))
     target_bins = np.linspace(0, 1, n_bins)
@@ -102,9 +97,7 @@ def power_spectrum(
     Fourier Transform (rDFT).
 
     Each nucleotide is encoded as a binary indicator signal. np.fft.rfft is
-    applied to each of the four channels independently — exploiting the fact
-    that the input signals are real-valued, which makes rfft both faster and
-    more memory-efficient than the full FFT. The power spectra (squared
+    applied to each of the four channels independently. The power spectra (squared
     magnitudes) of the four channels are summed into a single combined spectrum.
 
     The combined spectrum is then interpolated to n_bins frequency bins so
@@ -116,20 +109,20 @@ def power_spectrum(
     and retain only the periodic structure of the sequence.
 
     Parameters:
-    seq (str): The input DNA sequence.
-    normalise (bool): Whether to apply z-score normalisation (default: True).
-    n_bins (int): Number of frequency bins in the output spectrum (default: 512).
+    seq (str): the input DNA sequence.
+    normalise (bool): whether to apply z-score normalisation (default: True).
+    n_bins (int): number of frequency bins in the output spectrum (default: 512).
 
     Returns:
-    np.ndarray: The power spectrum of length n_bins.
+    np.ndarray: the power spectrum of length n_bins.
 
     Raises:
-    ValueError: If the sequence is empty.
+    ValueError: if the sequence is empty.
     """
     if not seq:
         raise ValueError("Sequence must not be empty.")
 
-    # Vectorised binary encoding: shape (4, L)
+    # vectorised binary encoding: shape (4, L)
     encoded = _binary_indicator_encoding(seq)
 
     # rfft on real-valued signals: returns L//2 + 1 non-redundant coefficients.
@@ -164,26 +157,26 @@ def spectral_distance(
     sequences differ in length.
 
     Two distance metrics are supported:
-    - 'euclidean': L2 distance between the two spectra. Sensitive to differences
+    - euclidean: L2 distance between the two spectra, sensitive to differences
       in power at each individual frequency bin.
-    - 'correlation': 1 minus the Pearson correlation between the two spectra.
-      Sensitive to differences in the overall shape of the spectrum rather than
+    - correlation: 1 minus the Pearson correlation between the two spectra,
+      sensitive to differences in the overall shape of the spectrum rather than
       absolute power values. Ranges from 0 (identical shape) to 2 (perfectly
       anti-correlated).
 
     Parameters:
-    seq_P (str): The first DNA sequence.
-    seq_Q (str): The second DNA sequence.
-    metric (str): Distance metric, either 'euclidean' or 'correlation'
+    seq_P (str): the first DNA sequence.
+    seq_Q (str): the second DNA sequence.
+    metric (str): distance metric, either 'euclidean' or 'correlation'
                   (default: 'euclidean').
-    n_bins (int): Number of frequency bins to use for comparison (default: 512).
+    n_bins (int): number of frequency bins to use for comparison (default: 512).
 
     Returns:
-    float: The spectral distance between the two sequences.
+    float: the spectral distance between the two sequences.
 
     Raises:
-    ValueError: If an unsupported metric is provided.
-    ValueError: If either sequence is empty.
+    ValueError: if an unsupported metric is provided.
+    ValueError: if either sequence is empty.
     """
     # Both spectra are interpolated to the same n_bins inside power_spectrum,
     # so no further alignment is needed here.
@@ -205,3 +198,13 @@ def spectral_distance(
         raise ValueError(
             f"Unsupported metric '{metric}'. Choose 'euclidean' or 'correlation'."
         )
+
+def power_spectra_batch(
+    seqs: list,
+    n_bins: int = DEFAULT_SPECTRUM_BINS,
+    normalise: bool = True
+) -> np.ndarray:
+    results = []
+    for seq in tqdm(seqs, desc="Computing power spectra"):
+        results.append(power_spectrum(seq, normalise=normalise, n_bins=n_bins))
+    return np.array(results)

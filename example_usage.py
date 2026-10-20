@@ -10,12 +10,18 @@ from src.dvq.statistical import (
     calculate_deng_entropies_multiprocess,
     deng_KL_divergence,
     kl_divergence,
-    js_divergence
+    js_divergence,
+    wasserstein_distance,
+    wasserstein_distance_matrix
 )
 
 from src.dvq.functional import (
-        find_genomic_repeats
-
+    find_genomic_repeats,
+    power_spectrum,
+    spectral_distance,
+    power_spectra_batch,
+    wavelet_energy,
+    wavelet_distance
 )
 
 
@@ -88,7 +94,40 @@ def main():
     print("\n--- Testing JS Divergence ---")
     js = js_divergence(seq_1, seq_2)
     print(f"JS divergence: {js}")
-    
+
+    # Test Wasserstein Distance
+    print("\n--- Testing Wasserstein Distance ---")
+    w_dist = wasserstein_distance(seq_1, seq_2)
+    print(f"Wasserstein distance: {w_dist}")
+
+    w_matrix = wasserstein_distance_matrix(seqs)
+    print(f"Wasserstein distance matrix:\n{w_matrix}")
+
+    # Test Fourier
+    print("\n--- Testing Fourier ---")
+    spectrum = power_spectrum(seq_1)
+    print(f"Power spectrum shape: {spectrum.shape}")
+
+    spectra = power_spectra_batch(seqs)
+    print(f"Power spectra batch shape: {spectra.shape}")
+
+    spec_dist = spectral_distance(seq_1, seq_2)
+    print(f"Spectral distance (euclidean): {spec_dist}")
+
+    spec_dist_corr = spectral_distance(seq_1, seq_2, metric="correlation")
+    print(f"Spectral distance (correlation): {spec_dist_corr}")
+
+    # Test Wavelet
+    print("\n--- Testing Wavelet ---")
+    energy = wavelet_energy(seq_1)
+    print(f"Wavelet energy vector: {energy}")
+
+    wav_dist = wavelet_distance(seq_1, seq_2)
+    print(f"Wavelet distance (euclidean): {wav_dist}")
+
+    wav_dist_corr = wavelet_distance(seq_1, seq_2, metric="correlation")
+    print(f"Wavelet distance (correlation): {wav_dist_corr}")
+
     return
 
 if __name__ == "__main__":
@@ -99,6 +138,8 @@ if __name__ == "__main__":
 # 
 # Add features:
 # JS divergence <- done
-# Wasserstein distance
+# Wasserstein distance <- done
+# Fourier <- done
+# Wavelet <- done
 
 # %%
