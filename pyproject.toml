@@ -17,6 +17,7 @@ dependencies = [
     "Cython", 
     "tqdm", 
     "sourmash",
+    "PyWavelets"
 ]
 
 [tool.setuptools.packages.find]
